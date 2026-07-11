@@ -1,0 +1,250 @@
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 m-0">Products</h1>
+  <div class="d-flex align-items-center gap-2">
+    <!-- View toggle -->
+    <div class="btn-group me-2" role="group" aria-label="Toggle view">
+      <button
+        type="button"
+        class="btn btn-sm"
+        [ngClass]="isGrid ? 'btn-primary' : 'btn-outline-primary'"
+        (click)="setViewMode('grid')"
+        title="Grid view"
+        [attr.aria-pressed]="isGrid"
+      >
+        Grid
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        [ngClass]="isList ? 'btn-primary' : 'btn-outline-primary'"
+        (click)="setViewMode('list')"
+        title="List view"
+        [attr.aria-pressed]="isList"
+      >
+        List
+      </button>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <label class="form-label m-0 me-1 small text-nowrap" for="pageSizeSelect">Items per page</label>
+      <select
+        id="pageSizeSelect"
+        class="form-select form-select-sm w-auto"
+        [ngModel]="pageSize"
+        (ngModelChange)="changePageSize($event)"
+      >
+        <option [ngValue]="6">6</option>
+        <option [ngValue]="10">10</option>
+        <option [ngValue]="12">12</option>
+        <option [ngValue]="18">18</option>
+        <option [ngValue]="24">24</option>
+      </select>
+    </div>
+    <a routerLink="/favorites" class="btn btn-outline-secondary btn-sm">View Favorites</a>
+  </div>
+</div>
+<!-- Filters -->
+<section class="product-filters mb-3">
+  <form [formGroup]="form" class="row g-2 align-items-end">
+    <div class="col-12 col-md-4">
+      <label for="q" class="form-label">Search</label>
+      <input
+        id="q"
+        type="text"
+        formControlName="q"
+        class="form-control"
+        placeholder="Search products..."
+      />
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label for="category" class="form-label">Category</label>
+      <select id="category" class="form-select" formControlName="category">
+        <option value="">All</option>
+        <option *ngFor="let c of (categories$ | async)" [value]="c">{{ c }}</option>
+      </select>
+    </div>
+
+    <div class="col-3 col-md-2">
+      <label for="min" class="form-label">Min price</label>
+      <input id="min" type="number" class="form-control" formControlName="min" />
+    </div>
+
+    <div class="col-3 col-md-2">
+      <label for="max" class="form-label">Max price</label>
+      <input id="max" type="number" class="form-control" formControlName="max" />
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label for="sort" class="form-label">Sort</label>
+      <select id="sort" class="form-select" formControlName="sort">
+        <option value="relevance">Relevance</option>
+        <option value="price_asc">Price: Low to High</option>
+        <option value="price_desc">Price: High to Low</option>
+        <option value="name_asc">Name: A → Z</option>
+        <option value="name_desc">Name: Z → A</option>
+      </select>
+    </div>
+
+    <div class="col-12 col-md-2">
+      <button type="button" class="btn btn-outline-secondary w-100" (click)="clearFilters()">
+        Clear
+      </button>
+    </div>
+  </form>
+</section>
+
+<section class="product-results">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="m-0">Results</h6>
+    <small class="text-muted">
+      {{ (filteredCount$ | async) ?? 0 }} items
+    </small>
+  </div>
+
+  <!-- Render grid or list based on viewMode -->
+  <ng-container *ngIf="pagedProducts$ | async as pageItems">
+    <!-- GRID VIEW -->
+    <div class="row g-3" *ngIf="isGrid; else listView">
+      <div class="col-12 col-sm-6 col-lg-4" *ngFor="let p of pageItems">
+        <div
+          class="card h-100 shadow-sm"
+          intersectionObserver
+          [ioRootMargin]="'250px 0px'"
+          [ioThreshold]="0.01"
+          [ioOnce]="true"
+          (ioVisible)="onVisible(p.id, $event)"
+        >
+          <!-- Image -->
+          <ng-container *ngIf="p.imageUrl; else noImg">
+            <div class="ratio" style="--bs-aspect-ratio: 66.6667%;">
+              <img
+                *ngIf="isVisible(p.id)"
+                [src]="p.imageUrl"
+                [alt]="p.title || p.name"
+                loading="lazy"
+                decoding="async"
+                fetchpriority="low"
+                width="600"
+                height="400"
+                class="card-img-top fade-in"
+                style="position:absolute; inset:0; width:100%; height:100%; object-fit: cover;"
+              />
+              <div *ngIf="!isVisible(p.id)" class="placeholder-glow card-img-top" style="position:absolute; inset:0;">
+                <div class="w-100 h-100 bg-light"></div>
+              </div>
+            </div>
+          </ng-container>
+          <ng-template #noImg></ng-template>
+
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">
+              <a [routerLink]="['/products', p.id]" class="link-underline link-underline-opacity-0">
+                {{ p.title || p.name }}
+              </a>
+            </h5>
+            <p class="card-text text-muted small mb-2" *ngIf="p.description">{{ p.description }}</p>
+            <div class="fw-semibold text-primary mb-3">{{ p.price | currency }}</div>
+
+            <div *ngIf="qtyInCart(p) > 0" class="alert alert-info py-2 px-3 small mb-3" role="status">
+              In cart: {{ qtyInCart(p) }}
+            </div>
+
+            <div class="mt-auto d-flex flex-wrap gap-2">
+              <button class="btn btn-primary" (click)="addToCart(p)">Add to Cart</button>
+              <button class="btn" [ngClass]="isFav(p) ? 'btn-warning' : 'btn-outline-warning'" (click)="toggleFav(p)">
+                <span *ngIf="isFav(p)">★ Favorited</span>
+                <span *ngIf="!isFav(p)">☆ Favorite</span>
+              </button>
+              <button class="btn btn-outline-primary" (click)="shareProduct(p)" aria-label="Share product">Share</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIST VIEW -->
+    <ng-template #listView>
+      <div class="list-group">
+        <div class="list-group-item p-3" *ngFor="let p of pageItems">
+          <div class="d-flex gap-3 align-items-start">
+            <div class="flex-shrink-0" style="width: 160px;">
+              <div
+                class="ratio"
+                style="--bs-aspect-ratio: 66.6667%;"
+                intersectionObserver
+                [ioRootMargin]="'250px 0px'"
+                [ioThreshold]="0.01"
+                [ioOnce]="true"
+                (ioVisible)="onVisible(p.id, $event)"
+              >
+                <img
+                  *ngIf="p.imageUrl && isVisible(p.id)"
+                  [src]="p.imageUrl"
+                  [alt]="p.title || p.name"
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="low"
+                  width="600"
+                  height="400"
+                  class="rounded fade-in"
+                  style="position:absolute; inset:0; width:100%; height:100%; object-fit: cover;"
+                />
+              </div>
+            </div>
+
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start">
+                <h5 class="mb-1">
+                  <a [routerLink]="['/products', p.id]" class="link-underline link-underline-opacity-0">
+                    {{ p.title || p.name }}
+                  </a>
+                </h5>
+                <div class="fw-semibold text-primary">{{ p.price | currency }}</div>
+              </div>
+
+              <p class="text-muted small mb-2" *ngIf="p.description">{{ p.description }}</p>
+
+              <div *ngIf="qtyInCart(p) > 0" class="alert alert-info py-2 px-3 small my-2" role="status">
+                In cart: {{ qtyInCart(p) }}
+              </div>
+
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                <button class="btn btn-sm btn-primary" (click)="addToCart(p)">Add to Cart</button>
+                <button class="btn btn-sm" [ngClass]="isFav(p) ? 'btn-warning' : 'btn-outline-warning'" (click)="toggleFav(p)">
+                  <span *ngIf="isFav(p)">★ Favorited</span>
+                  <span *ngIf="!isFav(p)">☆ Favorite</span>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" (click)="shareProduct(p)" aria-label="Share product">Share</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+  </ng-container>
+
+  <!-- Pagination footer (works for both views) -->
+  <nav class="mt-4" aria-label="Products pagination" *ngIf="(totalPages$ | async)! > 1">
+    <ul class="pagination justify-content-center flex-wrap">
+      <ng-container *ngIf="(pageParams$ | async) as pp">
+        <li class="page-item" [class.disabled]="pp.page === 1">
+          <button class="page-link" (click)="navigateTo(pp.page - 1)" [disabled]="pp.page === 1">Previous</button>
+        </li>
+
+        <li class="page-item" *ngFor="let p of (pages$ | async)" [class.active]="p === pp.page">
+          <button class="page-link" (click)="navigateTo(p)">{{ p }}</button>
+        </li>
+
+        <li class="page-item" [class.disabled]="pp.page === (totalPages$ | async)">
+          <button class="page-link" (click)="navigateTo(pp.page + 1)" [disabled]="pp.page === (totalPages$ | async)">Next</button>
+        </li>
+      </ng-container>
+    </ul>
+    <p class="text-center text-muted small m-0">
+      Page {{ (pageParams$ | async)?.page }} of {{ (totalPages$ | async) }} • Showing
+      {{ (pagedProducts$ | async)?.length ?? 0 }} of {{ (filteredCount$ | async) ?? 0 }} items
+    </p>
+  </nav>
+</section>
+

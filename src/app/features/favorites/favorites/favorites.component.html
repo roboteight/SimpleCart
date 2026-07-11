@@ -1,0 +1,84 @@
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 m-0">Favorites</h1>
+
+  <div class="d-flex align-items-center gap-2">
+    <!-- View toggle -->
+    <div class="btn-group me-2" role="group" aria-label="Toggle view">
+      <button
+        type="button"
+        class="btn btn-sm"
+        [ngClass]="isGrid ? 'btn-primary' : 'btn-outline-primary'"
+        (click)="setViewMode('grid')"
+        title="Grid view"
+        [attr.aria-pressed]="isGrid"
+      >
+        Grid
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        [ngClass]="isList ? 'btn-primary' : 'btn-outline-primary'"
+        (click)="setViewMode('list')"
+        title="List view"
+        [attr.aria-pressed]="isList"
+      >
+        List
+      </button>
+    </div>
+
+    <a routerLink="/products" class="btn btn-outline-secondary btn-sm">Back to products</a>
+  </div>
+</div>
+
+<ng-container *ngIf="favProducts().length; else none">
+  <!-- GRID VIEW -->
+  <div class="row g-3" *ngIf="isGrid; else listView">
+    <div class="col-12 col-sm-6 col-lg-4" *ngFor="let p of favProducts()">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title mb-2">
+            <a [routerLink]="['/products', p.id]" class="link-underline link-underline-opacity-0">
+              {{ p.title }}
+            </a>
+          </h5>
+          <p class="card-text fw-semibold text-primary mb-3">{{ p.price | currency }}</p>
+          <div class="mt-auto d-flex gap-2">
+            <button class="btn btn-primary" (click)="addToCart(p)">Add to Cart</button>
+            <button class="btn btn-outline-danger" (click)="toggleFav(p.id)">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <ng-template #listView>
+    <div class="list-group">
+      <div class="list-group-item p-3" *ngFor="let p of favProducts()">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div class="flex-grow-1">
+            <h5 class="mb-1">
+              <a [routerLink]="['/products', p.id]" class="link-underline link-underline-opacity-0">
+                {{ p.title }}
+              </a>
+            </h5>
+            <p class="text-muted small mb-2" *ngIf="p.description">{{ p.description }}</p>
+          </div>
+          <div class="text-end">
+            <div class="fw-semibold text-primary mb-2">{{ p.price | currency }}</div>
+            <div class="d-flex gap-2 justify-content-end">
+              <button class="btn btn-sm btn-primary" (click)="addToCart(p)">Add to Cart</button>
+              <button class="btn btn-sm btn-outline-danger" (click)="toggleFav(p.id)">Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+</ng-container>
+
+<ng-template #none>
+  <div class="alert alert-info" role="alert">
+    No favorite items yet.
+  </div>
+</ng-template>

@@ -1,0 +1,165 @@
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h1 class="h4 m-0">Settings</h1>
+        </div>
+
+        <ng-container *ngIf="user(); else noUser">
+          <form (ngSubmit)="save(f)" #f="ngForm" class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="name">Name</label>
+              <input id="name" [(ngModel)]="name" name="name" required class="form-control" #nameCtrl="ngModel" />
+              <div class="invalid-feedback d-block" *ngIf="nameCtrl.invalid && (nameCtrl.dirty || nameCtrl.touched || f.submitted)">
+                Name is required.
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="email">Email</label>
+              <input id="email" [(ngModel)]="email" name="email" type="email" required class="form-control" #emailCtrl="ngModel" />
+              <div class="invalid-feedback d-block" *ngIf="emailCtrl.invalid && (emailCtrl.dirty || emailCtrl.touched || f.submitted)">
+                A valid email is required.
+              </div>
+            </div>
+
+            <div class="col-12">
+              <hr />
+              <div class="d-flex align-items-center justify-content-between">
+                <h2 class="h6 text-muted mb-0">Contact information</h2>
+                <div *ngIf="addressValidated" class="badge text-bg-success">Address validated</div>
+                <div *ngIf="!addressValidated && (address1 || city || postalCode)" class="badge text-bg-warning">Not validated</div>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="phone">Phone</label>
+              <input
+                id="phone"
+                [(ngModel)]="phone"
+                name="phone"
+                type="tel"
+                class="form-control"
+                placeholder="+1 555 123 4567"
+                pattern="^[+()\d\s-]{7,20}$"
+                #phoneCtrl="ngModel"
+              />
+              <div class="invalid-feedback d-block" *ngIf="phoneCtrl.invalid && (phoneCtrl.dirty || phoneCtrl.touched || f.submitted)">
+                Enter a valid phone number (digits, spaces, +, -, parentheses).
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="address1">Address line 1</label>
+              <input
+                id="address1"
+                [(ngModel)]="address1"
+                name="address1"
+                class="form-control"
+                placeholder="Street address, P.O. box"
+                required
+                minlength="3"
+                (ngModelChange)="onAddressInput($event)"
+                #address1Ctrl="ngModel"
+                autocomplete="off"
+              />
+              <div class="invalid-feedback d-block" *ngIf="address1Ctrl.invalid && (address1Ctrl.dirty || address1Ctrl.touched || f.submitted)">
+                Address line 1 is required (min 3 characters).
+              </div>
+
+              <div class="position-relative mt-1" *ngIf="addressLookupLoading || suggestions.length">
+                <div class="form-text" *ngIf="addressLookupLoading">Searching addresses…</div>
+                <ul
+                  class="list-group shadow-sm"
+                  style="z-index: 10; position: absolute; width: 100%; max-height: 240px; overflow: auto;"
+                  role="listbox"
+                  *ngIf="!addressLookupLoading && suggestions.length"
+                >
+                  <li
+                    class="list-group-item list-group-item-action"
+                    *ngFor="let s of suggestions; let i = index"
+                    role="option"
+                    (click)="applySuggestion(s)"
+                  >
+                    <div class="fw-semibold">{{ s.address1 }}</div>
+                    <div class="small text-muted">{{ s.city }}, {{ s.state }} {{ s.postalCode }} • {{ s.country }}</div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="address2">Address line 2</label>
+              <input
+                id="address2"
+                [(ngModel)]="address2"
+                name="address2"
+                class="form-control"
+                placeholder="Apartment, suite, unit, building, floor, etc."
+                (ngModelChange)="markAddressUnvalidated()"
+              />
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="city">City</label>
+              <input id="city" [(ngModel)]="city" name="city" class="form-control" required minlength="2" (ngModelChange)="markAddressUnvalidated()" #cityCtrl="ngModel" />
+              <div class="invalid-feedback d-block" *ngIf="cityCtrl.invalid && (cityCtrl.dirty || cityCtrl.touched || f.submitted)">
+                City is required (min 2 characters).
+              </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label" for="state">State/Region</label>
+              <input id="state" [(ngModel)]="state" name="state" class="form-control" required minlength="2" maxlength="50" (ngModelChange)="markAddressUnvalidated()" #stateCtrl="ngModel" />
+              <div class="invalid-feedback d-block" *ngIf="stateCtrl.invalid && (stateCtrl.dirty || stateCtrl.touched || f.submitted)">
+                State/Region is required.
+              </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label" for="postalCode">Postal code</label>
+              <input
+                id="postalCode"
+                [(ngModel)]="postalCode"
+                name="postalCode"
+                class="form-control"
+                required
+                minlength="3"
+                maxlength="12"
+                pattern="^[A-Za-z0-9\s-]{3,12}$"
+                (ngModelChange)="markAddressUnvalidated()"
+                #postalCtrl="ngModel"
+              />
+              <div class="invalid-feedback d-block" *ngIf="postalCtrl.invalid && (postalCtrl.dirty || postalCtrl.touched || f.submitted)">
+                Enter a valid postal code (3–12 letters, digits, spaces or dashes).
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="country">Country</label>
+              <input id="country" [(ngModel)]="country" name="country" class="form-control" required minlength="2" (ngModelChange)="markAddressUnvalidated()" #countryCtrl="ngModel" />
+              <div class="invalid-feedback d-block" *ngIf="countryCtrl.invalid && (countryCtrl.dirty || countryCtrl.touched || f.submitted)">
+                Country is required.
+              </div>
+            </div>
+
+            <div class="col-12 d-flex gap-2 align-items-center">
+              <button class="btn btn-outline-secondary" type="button" (click)="validateAddress()">Validate address</button>
+              <span class="text-muted small" *ngIf="validationMessage">{{ validationMessage }}</span>
+            </div>
+
+            <div class="col-12">
+              <button class="btn btn-primary" [disabled]="f.invalid || !addressValidated">Save</button>
+            </div>
+          </form>
+        </ng-container>
+
+        <ng-template #noUser>
+          <div class="alert alert-warning" role="alert">
+            You are not logged in.
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>
